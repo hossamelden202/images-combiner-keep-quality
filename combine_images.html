@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WhatsApp Story Combiner</title>
+<style>
+  :root[data-theme="dark"] {
+    --bg: #000;
+    --surface: #111;
+    --border: #2a2a2a;
+    --text: #fff;
+    --subtext: #777;
+    --btn-bg: #1a1a1a;
+    --btn-hover: #222;
+    --dl-bg: #fff;
+    --dl-color: #000;
+    --dl-hover: #ddd;
+    --toggle-bg: #1a1a1a;
+    --toggle-color: #fff;
+    --status-ok: #4ade80;
+    --dashed: #2a2a2a;
+    --badge-bg: #1a1a1a;
+    --badge-color: #888;
+    --warn-bg: #1a1200;
+    --warn-border: #7c5c00;
+    --warn-color: #fbbf24;
+    --good-bg: #001a08;
+    --good-border: #1a5c30;
+    --good-color: #4ade80;
+    --bad-bg: #1a0000;
+    --bad-border: #7c0000;
+    --bad-color: #f87171;
+    --slide-active: #fff;
+    --slide-inactive: #333;
+  }
+  :root[data-theme="light"] {
+    --bg: #f0f0f0;
+    --surface: #fff;
+    --border: #ddd;
+    --text: #111;
+    --subtext: #666;
+    --btn-bg: #eee;
+    --btn-hover: #e0e0e0;
+    --dl-bg: #111;
+    --dl-color: #fff;
+    --dl-hover: #333;
+    --toggle-bg: #e0e0e0;
+    --toggle-color: #333;
+    --status-ok: #16a34a;
+    --dashed: #ccc;
+    --badge-bg: #e8e8e8;
+    --badge-color: #555;
+    --warn-bg: #fffbeb;
+    --warn-border: #d97706;
+    --warn-color: #92400e;
+    --good-bg: #f0fdf4;
+    --good-border: #16a34a;
+    --good-color: #14532d;
+    --bad-bg: #fff0f0;
+    --bad-border: #dc2626;
+    --bad-color: #7f1d1d;
+    --slide-active: #111;
+    --slide-inactive: #ccc;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; transition: background 0.2s, color 0.2s, border-color 0.2s; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 28px 20px 48px;
+  }
+
+  .topbar {
+    width: 100%; max-width: 540px;
+    display: flex; justify-content: flex-end;
+    margin-bottom: 24px;
+  }
+  .toggle {
+    background: var(--toggle-bg); color: var(--toggle-color);
+    border: 1px solid var(--border); border-radius: 20px;
+    padding: 7px 16px; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+  }
+  .toggle:hover { opacity: 0.75; }
+
+  .header { text-align: center; margin-bottom: 22px; }
+  .header h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 5px; }
+  .header p  { color: var(--subtext); font-size: 0.85rem; }
+
+  /* Quality meter */
+  .quality-bar {
+    width: 100%; max-width: 540px;
+    margin-bottom: 14px;
+    display: none;
+  }
+  .qb-top {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 6px;
+  }
+  .qb-label { font-size: 0.8rem; color: var(--subtext); }
+  .qb-value { font-size: 0.8rem; font-weight: 700; }
+  .qb-track {
+    height: 6px; background: var(--border); border-radius: 99px; overflow: hidden;
+  }
+  .qb-fill {
+    height: 100%; border-radius: 99px;
+    transition: width 0.4s, background 0.4s;
+  }
+
+  /* Alert box */
+  .alert {
+    width: 100%; max-width: 540px;
+    border-radius: 12px; padding: 12px 16px;
+    font-size: 0.82rem; line-height: 1.6;
+    margin-bottom: 14px; display: none;
+    border: 1px solid;
+  }
+  .alert.warn  { background: var(--warn-bg); border-color: var(--warn-border); color: var(--warn-color); }
+  .alert.good  { background: var(--good-bg); border-color: var(--good-border); color: var(--good-color); }
+  .alert.bad   { background: var(--bad-bg);  border-color: var(--bad-border);  color: var(--bad-color); }
+  .alert b { font-weight: 700; }
+
+  /* Controls row */
+  .controls {
+    width: 100%; max-width: 540px;
+    display: flex; flex-wrap: wrap; gap: 12px;
+    margin-bottom: 16px; align-items: center;
+  }
+  .ctrl-group { display: flex; align-items: center; gap: 8px; }
+  .ctrl-group span { color: var(--subtext); font-size: 0.82rem; white-space: nowrap; }
+  .btn-group { display: flex; gap: 6px; flex-wrap: wrap; }
+  .seg-btn {
+    background: var(--badge-bg); color: var(--badge-color);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 5px 12px; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+  }
+  .seg-btn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .seg-btn:hover { opacity: 0.8; }
+
+  /* Recommended badge */
+  .rec-badge {
+    font-size: 0.7rem; background: #4ade8033; color: #4ade80;
+    border-radius: 4px; padding: 1px 5px; margin-left: 3px;
+    display: none;
+  }
+
+  /* Upload card */
+  .card {
+    background: var(--surface); border: 2px dashed var(--dashed);
+    border-radius: 16px; padding: 26px 24px;
+    width: 100%; max-width: 540px; text-align: center; margin-bottom: 16px;
+  }
+  .card p { color: var(--subtext); font-size: 0.84rem; margin-bottom: 14px; line-height: 1.6; }
+  .card p strong { color: var(--text); }
+  .choose-btn {
+    display: inline-block; background: var(--btn-bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 26px; cursor: pointer; font-size: 0.95rem; font-weight: 600;
+  }
+  .choose-btn:hover { background: var(--btn-hover); }
+  #fileInput { display: none; }
+  #status { margin-top: 12px; font-size: 0.84rem; color: var(--subtext); min-height: 20px; }
+  #status.ok  { color: var(--status-ok); font-weight: 600; }
+
+  /* Slide navigator */
+  #navigator {
+    width: 100%; max-width: 540px;
+    display: none; align-items: center; justify-content: center;
+    gap: 10px; margin-bottom: 10px;
+  }
+  .nav-btn {
+    background: var(--btn-bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 5px 14px; cursor: pointer; font-size: 0.85rem; font-weight: 600;
+  }
+  .nav-btn:disabled { opacity: 0.3; cursor: default; }
+  #slide-dots { display: flex; gap: 6px; align-items: center; }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--slide-inactive); cursor: pointer; transition: background 0.2s;
+  }
+  .dot.active { background: var(--slide-active); }
+  #slide-label { font-size: 0.8rem; color: var(--subtext); }
+
+  /* Preview */
+  #previewWrap {
+    width: 100%; max-width: 540px;
+    display: none; flex-direction: column; align-items: center;
+  }
+  canvas { width: 100%; border-radius: 12px; border: 1px solid var(--border); display: block; }
+
+  #dlBtn {
+    width: 100%; max-width: 540px; display: none;
+    background: var(--dl-bg); color: var(--dl-color);
+    border: none; border-radius: 12px;
+    padding: 14px; font-size: 1rem; font-weight: 700;
+    cursor: pointer; margin-top: 14px;
+  }
+  #dlBtn:hover { background: var(--dl-hover); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="toggle" onclick="toggleTheme()" id="themeBtn">Dark</button>
+</div>
+
+<div class="header">
+  <h1>WhatsApp Story Combiner</h1>
+  <p>Upload images → get one story-ready PNG (1080×1920)</p>
+</div>
+
+<!-- Quality bar -->
+<div class="quality-bar" id="qualityBar">
+  <div class="qb-top">
+    <span class="qb-label">Readability quality</span>
+    <span class="qb-value" id="qbValue">—</span>
+  </div>
+  <div class="qb-track"><div class="qb-fill" id="qbFill" style="width:0%"></div></div>
+</div>
+
+<!-- Alert -->
+<div class="alert" id="alertBox"></div>
+
+<!-- Controls -->
+<div class="controls">
+  <div class="ctrl-group">
+    <span>Fill:</span>
+    <div class="btn-group">
+      <button class="seg-btn" data-val="black" onclick="setFill('black')">Black</button>
+      <button class="seg-btn active" data-val="blur" onclick="setFill('blur')">Blur Fill</button>
+    </div>
+  </div>
+  <div class="ctrl-group">
+    <span>Max per slide:</span>
+    <div class="btn-group" id="maxBtns">
+      <button class="seg-btn" data-val="1" onclick="setMax(1)">1</button>
+      <button class="seg-btn" data-val="2" onclick="setMax(2)">2</button>
+      <button class="seg-btn" data-val="3" onclick="setMax(3)">3</button>
+      <button class="seg-btn active" data-val="4" onclick="setMax(4)">4 <span class="rec-badge" id="rec4">Best</span></button>
+      <button class="seg-btn" data-val="6" onclick="setMax(6)">6</button>
+      <button class="seg-btn" data-val="9" onclick="setMax(9)">9</button>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <p>
+    Select <strong>as many images as you want</strong><br>
+    (hold <strong>Ctrl / Cmd</strong> to pick multiple)<br>
+    They will be auto-split into slides
+  </p>
+  <label class="choose-btn" for="fileInput">Choose Images</label>
+  <input type="file" id="fileInput" accept="image/*" multiple>
+  <div id="status">No files selected</div>
+</div>
+
+<!-- Slide navigator -->
+<div id="navigator">
+  <button class="nav-btn" id="prevBtn" onclick="goSlide(-1)">&#8592;</button>
+  <div id="slide-dots"></div>
+  <span id="slide-label"></span>
+  <button class="nav-btn" id="nextBtn" onclick="goSlide(1)">&#8594;</button>
+</div>
+
+<div id="previewWrap">
+  <canvas id="canvas"></canvas>
+</div>
+<button id="dlBtn" onclick="dlAll()">Download All Slides</button>
+
+<script>
+// ── Theme ──────────────────────────────────────────────
+const html = document.documentElement;
+const themeBtn = document.getElementById('themeBtn');
+function toggleTheme() {
+  const dark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', dark ? 'light' : 'dark');
+  themeBtn.textContent = dark ? 'Light' : 'Dark';
+}
+
+// ── State ──────────────────────────────────────────────
+let fillMode     = 'blur';
+let maxPerSlide  = 4;
+let loadedImages = [];
+let slideCanvases = [];
+let currentSlide  = 0;
+
+// ── Fill toggle ────────────────────────────────────────
+function setFill(mode) {
+  fillMode = mode;
+  document.querySelectorAll('[data-val="black"],[data-val="blur"]').forEach(b => {
+    b.classList.toggle('active', b.dataset.val === mode);
+  });
+  if (loadedImages.length) buildSlides();
+}
+
+// ── Max per slide ──────────────────────────────────────
+function setMax(n) {
+  maxPerSlide = n;
+  document.querySelectorAll('#maxBtns .seg-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.val) === n);
+  });
+  if (loadedImages.length) buildSlides();
+}
+
+// ── Quality scoring ────────────────────────────────────
+// Each photo gets cellW × cellH pixels. Score based on min dimension.
+function qualityScore(n) {
+  const W = 1080, H = 1920, PAD = 32, GAP = 24;
+  const { cols, rows } = getGrid(n);
+  const cellW = (W - PAD * 2 - GAP * (cols - 1)) / cols;
+  const cellH = (H - PAD * 2 - GAP * (rows - 1)) / rows;
+  const minDim = Math.min(cellW, cellH);
+  // 540px+ = excellent, 320px = good, 200px = poor, <150px = unreadable
+  if (minDim >= 500) return { score: 100, label: 'Excellent', cls: 'good' };
+  if (minDim >= 380) return { score: 85,  label: 'Great',     cls: 'good' };
+  if (minDim >= 280) return { score: 65,  label: 'Good',      cls: 'warn' };
+  if (minDim >= 200) return { score: 40,  label: 'Fair',      cls: 'warn' };
+  if (minDim >= 150) return { score: 20,  label: 'Poor',      cls: 'bad'  };
+  return               { score: 5,   label: 'Unreadable', cls: 'bad'  };
+}
+
+function updateQualityUI() {
+  if (!loadedImages.length) return;
+  const n = Math.min(maxPerSlide, loadedImages.length);
+  const { score, label, cls } = qualityScore(n);
+  const numSlides = Math.ceil(loadedImages.length / maxPerSlide);
+
+  // Bar
+  const bar = document.getElementById('qualityBar');
+  bar.style.display = 'block';
+  document.getElementById('qbValue').textContent = label;
+  document.getElementById('qbValue').style.color =
+    cls === 'good' ? 'var(--status-ok)' : cls === 'warn' ? '#fbbf24' : '#f87171';
+  const fill = document.getElementById('qbFill');
+  fill.style.width  = score + '%';
+  fill.style.background =
+    cls === 'good' ? '#4ade80' : cls === 'warn' ? '#fbbf24' : '#f87171';
+
+  // Alert
+  const box = document.getElementById('alertBox');
+  box.style.display = 'block';
+  box.className = 'alert ' + cls;
+
+  // Recommend best max
+  const bestMax = recommendMax(loadedImages.length);
+
+  if (cls === 'good') {
+    box.innerHTML = `<b>Quality looks good.</b> ${loadedImages.length} photo${loadedImages.length>1?'s':''} split into ${numSlides} slide${numSlides>1?'s':''} at max ${maxPerSlide} per slide.`;
+  } else if (cls === 'warn') {
+    box.innerHTML = `<b>Quality is fair.</b> Photos will be readable but smaller than ideal. Try setting max to <b>${bestMax}</b> per slide for better results — that gives you ${Math.ceil(loadedImages.length/bestMax)} slides.`;
+  } else {
+    box.innerHTML = `<b>Too many photos per slide — will be unreadable.</b> Set max to <b>${bestMax}</b> per slide. That splits your ${loadedImages.length} photos into ${Math.ceil(loadedImages.length/bestMax)} slides at good size.`;
+  }
+}
+
+function recommendMax(total) {
+  // Find highest max where quality is at least "Good" (minDim >= 280)
+  for (let m = 1; m <= 9; m++) {
+    const { cols, rows } = getGrid(m);
+    const W = 1080, H = 1920, PAD = 32, GAP = 24;
+    const cellW = (W - PAD * 2 - GAP * (cols - 1)) / cols;
+    const cellH = (H - PAD * 2 - GAP * (rows - 1)) / rows;
+    if (Math.min(cellW, cellH) < 280) return Math.max(1, m - 1);
+  }
+  return 4;
+}
+
+// ── Core ───────────────────────────────────────────────
+const fileInput   = document.getElementById('fileInput');
+const statusEl    = document.getElementById('status');
+const canvas      = document.getElementById('canvas');
+const ctx         = canvas.getContext('2d');
+const previewWrap = document.getElementById('previewWrap');
+const dlBtn       = document.getElementById('dlBtn');
+
+const W = 1080, H = 1920, PAD = 32, GAP = 24;
+
+fileInput.addEventListener('change', async () => {
+  const files = [...fileInput.files];
+  if (!files.length) return;
+  statusEl.textContent = 'Loading images…';
+  statusEl.className = '';
+  loadedImages = await Promise.all(files.map(loadImage));
+  updateQualityUI();
+  buildSlides();
+});
+
+function loadImage(file) {
+  return new Promise(res => {
+    const img = new Image();
+    img.onload = () => res(img);
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+function buildSlides() {
+  updateQualityUI();
+  slideCanvases = [];
+  const total = loadedImages.length;
+  const numSlides = Math.ceil(total / maxPerSlide);
+  for (let s = 0; s < numSlides; s++) {
+    const chunk = loadedImages.slice(s * maxPerSlide, (s + 1) * maxPerSlide);
+    slideCanvases.push(renderSlide(chunk));
+  }
+  currentSlide = 0;
+  showSlide(0);
+
+  const slideWord = numSlides === 1 ? 'slide' : 'slides';
+  statusEl.textContent = `${total} photo${total>1?'s':''} → ${numSlides} ${slideWord} ready`;
+  statusEl.className = 'ok';
+  previewWrap.style.display = 'flex';
+  dlBtn.style.display = 'block';
+  dlBtn.textContent = numSlides === 1 ? 'Download Slide' : `Download All ${numSlides} Slides`;
+
+  // Navigator
+  const nav = document.getElementById('navigator');
+  if (numSlides > 1) {
+    nav.style.display = 'flex';
+    buildDots(numSlides);
+  } else {
+    nav.style.display = 'none';
+  }
+}
+
+function showSlide(idx) {
+  currentSlide = idx;
+  canvas.width  = slideCanvases[idx].width;
+  canvas.height = slideCanvases[idx].height;
+  ctx.drawImage(slideCanvases[idx], 0, 0);
+
+  document.getElementById('prevBtn').disabled = idx === 0;
+  document.getElementById('nextBtn').disabled = idx === slideCanvases.length - 1;
+  document.getElementById('slide-label').textContent = `${idx+1} / ${slideCanvases.length}`;
+  document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === idx));
+}
+
+function goSlide(dir) {
+  const next = currentSlide + dir;
+  if (next >= 0 && next < slideCanvases.length) showSlide(next);
+}
+
+function buildDots(n) {
+  const container = document.getElementById('slide-dots');
+  container.innerHTML = '';
+  for (let i = 0; i < n; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.onclick = () => showSlide(i);
+    container.appendChild(d);
+  }
+}
+
+// ── Rendering ──────────────────────────────────────────
+function renderSlide(images) {
+  const c  = document.createElement('canvas');
+  c.width  = W; c.height = H;
+  const cx = c.getContext('2d');
+  cx.fillStyle = '#000';
+  cx.fillRect(0, 0, W, H);
+
+  const n = images.length;
+  const { cols, rows } = getGrid(n);
+  const cellW = (W - PAD * 2 - GAP * (cols - 1)) / cols;
+  const cellH = (H - PAD * 2 - GAP * (rows - 1)) / rows;
+
+  images.forEach((img, i) => {
+    const col      = i % cols;
+    const row      = Math.floor(i / cols);
+    const rowStart = row * cols;
+    const rowCount = Math.min(cols, n - rowStart);
+    const offsetX  = rowCount < cols ? ((cols - rowCount) * (cellW + GAP)) / 2 : 0;
+    const x = PAD + col * (cellW + GAP) + offsetX;
+    const y = PAD + row * (cellH + GAP);
+    fillMode === 'blur' ? drawBlurFill(cx, img, x, y, cellW, cellH)
+                        : drawContain(cx, img, x, y, cellW, cellH);
+  });
+  return c;
+}
+
+function drawBlurFill(cx, img, x, y, w, h) {
+  cx.save();
+  cx.beginPath(); cx.rect(x, y, w, h); cx.clip();
+  const sc = Math.max(w / img.width, h / img.height);
+  const bw = img.width * sc, bh = img.height * sc;
+  cx.filter = 'blur(20px) brightness(0.5)';
+  cx.drawImage(img, x + (w - bw) / 2, y + (h - bh) / 2, bw, bh);
+  cx.filter = 'none';
+  const sc2 = Math.min(w / img.width, h / img.height);
+  const dw = img.width * sc2, dh = img.height * sc2;
+  cx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+  cx.restore();
+}
+
+function drawContain(cx, img, x, y, w, h) {
+  const scale = Math.min(w / img.width, h / img.height);
+  const dw = img.width * scale, dh = img.height * scale;
+  cx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+}
+
+function getGrid(n) {
+  const map = {
+    1:{cols:1,rows:1}, 2:{cols:1,rows:2}, 3:{cols:1,rows:3},
+    4:{cols:2,rows:2}, 5:{cols:2,rows:3}, 6:{cols:2,rows:3},
+    7:{cols:2,rows:4}, 8:{cols:2,rows:4}, 9:{cols:3,rows:3},
+  };
+  return map[n] || { cols: 3, rows: Math.ceil(n / 3) };
+}
+
+// ── Download ───────────────────────────────────────────
+function dlAll() {
+  slideCanvases.forEach((c, i) => {
+    setTimeout(() => {
+      const a = document.createElement('a');
+      a.href = c.toDataURL('image/png');
+      a.download = slideCanvases.length === 1 ? 'story.png' : `story_${i+1}.png`;
+      a.click();
+    }, i * 400);
+  });
+}
+</script>
+</body>
+</html>
